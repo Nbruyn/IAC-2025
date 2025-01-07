@@ -1,0 +1,5 @@
+-name: Test Ansible Setup
+ hosts:  localhost
+ tasks:
+   - name: Ensure ping module works
+     ansible.builtin.ping:
