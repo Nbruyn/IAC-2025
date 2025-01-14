@@ -11,11 +11,25 @@
         name: apache2
         state: present
 
-    - name: Open port 443 for encrypted web traffic
+    - name: Open port 80 for web traffic
       community.general.ufw:
         rule: allow
-        port: 443
+        port: 80
         proto: tcp
+
+    - name: Install php
+      apt:
+        name: php
+        state: present
+
+    - name: Install php-mysql
+      apt:
+        name: php-mysql
+        state: present
+
+    - name: Install mysql-client
+      apt:
+        name: mysql-client
 
     - name: Open port 3306 for MYSQL database
       community.general.ufw:

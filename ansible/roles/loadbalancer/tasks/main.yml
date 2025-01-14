@@ -1,0 +1,22 @@
+---
+- hosts: 10.0.0.20
+  become: yes
+  tasks:
+    - name: Update Cache
+      apt:
+        update_cache: true
+
+    - name: Install haproxy
+      apt:
+        name: haproxy
+        state: present
+
+    - name: Configure haproxy
+      template:
+        src:
+        dest:
+
+    - name: haproxy restart
+      apt:
+        service: haproxy
+        state: restarted
