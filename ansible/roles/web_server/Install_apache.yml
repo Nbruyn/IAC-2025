@@ -1,0 +1,24 @@
+---
+- hosts: 10.0.0.20
+  become: yes
+  tasks:
+    - name: Update Cache
+      apt:
+        update_cache: true
+
+    - name: Install Apache
+      apt:
+        name: apache2
+        state: present
+
+    - name: Open port 443 for encrypted web traffic
+      community.general.ufw:
+        rule: allow
+        port: 443
+        proto: tcp
+
+    - name: Open port 3306 for MYSQL database
+      community.general.ufw:
+        rule: allow
+        port: 3306
+        proto: tcp

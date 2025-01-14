@@ -1,0 +1,6 @@
+---
+- hosts: 10.0.0.20
+  tasks:
+    - name: Update apt package cache
+      apt:
+        update_cache: true
