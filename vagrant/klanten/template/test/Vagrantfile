@@ -1,0 +1,31 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  # SSH private key configuratie  
+  config.ssh.insert_key = false
+  config.ssh.private_key_path = ["/home/neville/.ssh/id_rsa", "~/.vagrant.d/insecure_private_key"]
+
+  # Servers declareren
+  servers = [
+    { name: "Klant1-test-web01", ip: "10.0.0.20" },
+    { name: "Klant1-test-web02", ip: "10.0.0.21" },
+    { name: "Klant1-test-LB01", ip: "10.0.0.22" }
+  ]
+
+  # Loop door de lijst met eerder gedeclareerde servers
+  servers.each do |server|
+    config.vm.define server[:name] do |srv|
+      srv.vm.hostname = server[:name]
+      srv.vm.box = "ubuntu/bionic64"
+      srv.vm.network "private_network", ip: server[:ip]
+      
+      # Resources toekennen aan gedeclareerde servers
+      srv.vm.provider "virtualbox" do |vb|
+        vb.memory = "512"
+        vb.gui = false
+        vb.name = server[:name]
+      end
+    end
+  end
+end
