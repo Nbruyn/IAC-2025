@@ -1,5 +1,5 @@
 ---
-- hosts: 10.0.0.20
+- hosts: web_servers
   become: yes
   tasks:
     - name: Update Cache
@@ -36,3 +36,16 @@
         rule: allow
         port: 3306
         proto: tcp
+
+    - name: Deploy basic index.html
+      template:
+        src: "~/IAC-2025/ansible/roles/web_server//templates/index.php.j2"
+        dest: "/var/www/html/index.php"
+        owner: "www-data"
+        group: "www-data"
+        mode: "0644"
+
+    - name: restart apache
+      service:
+        name: apache2
+        state: restarted

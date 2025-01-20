@@ -1,0 +1,11 @@
+ssh-keygen -R 10.0.0.20
+ssh-keyscan 10.0.0.20 >> ~/.ssh/known_hosts
+
+ansible-playbook -i /home/neville/IAC-2025/ansible/inventories/inventory_t.ini main.yml
+
+
+
+
+git add .
+git status
+git commit -m "Added roles and playbooks for loadbalancer,webserver and databaseserver"

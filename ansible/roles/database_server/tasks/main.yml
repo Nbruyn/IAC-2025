@@ -6,32 +6,28 @@
       apt:
         update_cache: true
 
-    - name: Install Apache
+    - name: Python-mysql
       apt:
-        name: apache2
+        name: python3-mysqldb
         state: present
 
-    - name: Open port 80 for web traffic
-      community.general.ufw:
-        rule: allow
-        port: 80
-        proto: tcp
-
-    - name: Install php
+    - name: Install libmysqlclient-dev
       apt:
-        name: php
+        name: libmysqlclient-dev
         state: present
 
-    - name: Install php-mysql
+    - name: Install MYSQL
       apt:
-        name: php-mysql
+        name: mysql-server
         state: present
 
-    - name: Install mysql-client
+    - name: Start MYSQL service
       apt:
-        name: mysql-client
+        name: mysql
+        state: started
+        enabled: yes
 
-    - name: Open port 3306 for MYSQL database
+    - name: Open port 3306 for MYSQL
       community.general.ufw:
         rule: allow
         port: 3306
