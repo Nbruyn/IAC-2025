@@ -1,5 +1,5 @@
 ---
-- hosts: 10.0.0.20
+- hosts: 10.0.0.22
   become: yes
   tasks:
     - name: Update Cache
@@ -13,10 +13,10 @@
 
     - name: Configure haproxy
       template:
-        src:
-        dest:
+        src: "~/IAC-2025/ansible/roles/loadbalancer/templates/haproxy.cfg.j2"
+        dest: "/etc/haproxy/haproxy.cfg"
 
     - name: haproxy restart
-      apt:
-        service: haproxy
+      service:
+        name: haproxy
         state: restarted

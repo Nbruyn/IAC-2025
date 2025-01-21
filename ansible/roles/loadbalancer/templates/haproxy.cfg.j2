@@ -1,0 +1,48 @@
+#---------------------------------------------------------------------
+# common defaults that all the 'listen' and 'backend' sections will
+# use if not designated in their block
+#---------------------------------------------------------------------
+defaults
+    mode                    http
+    log                     global
+    option                  httplog
+    option                  dontlognull
+    option http-server-close
+    option forwardfor       except 127.0.0.0/8
+    option                  redispatch
+    retries                 3
+    timeout http-request    10s
+    timeout queue           1m
+    timeout connect         10s
+    timeout client          1m
+    timeout server          1m
+    timeout http-keep-alive 10s
+    timeout check           10s
+    maxconn                 3000
+
+#---------------------------------------------------------------------
+# main frontend
+#---------------------------------------------------------------------
+frontend main
+    bind *:5000
+    acl url_static       path_beg       -i /static /images /javascript /stylesheets
+    acl url_static       path_end       -i .jpg .gif .png .css .js
+
+    use_backend static          if url_static
+    default_backend             app
+
+#---------------------------------------------------------------------
+# static backend
+#---------------------------------------------------------------------
+backend static
+    balance     roundrobin
+    server      static 127.0.0.1:4331 check
+
+#---------------------------------------------------------------------
+# round robin balancing
+#---------------------------------------------------------------------
+backend app
+    balance     roundrobin
+    {% for host in groups['web_servers'] %}
+    server {{ host }} {{ hostvars[host]['ansible_host'] }}:80 check
+    {% endfor %}
