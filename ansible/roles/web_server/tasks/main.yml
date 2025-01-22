@@ -37,7 +37,13 @@
         port: 3306
         proto: tcp
 
-    - name: Deploy basic index.html
+    - name: Remove Default index.html
+      file:
+        path: "/var/www/html/index.html"
+        state: absent
+
+
+    - name: Deploy basic index.php
       template:
         src: "~/IAC-2025/ansible/roles/web_server//templates/index.php.j2"
         dest: "/var/www/html/index.php"
