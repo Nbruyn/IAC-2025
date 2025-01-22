@@ -24,7 +24,7 @@ defaults
 # main frontend
 #---------------------------------------------------------------------
 frontend main
-    bind *:5000
+    bind *:80
     acl url_static       path_beg       -i /static /images /javascript /stylesheets
     acl url_static       path_end       -i .jpg .gif .png .css .js
 
