@@ -1,5 +1,5 @@
 ---
-- hosts: 10.0.0.20
+- hosts: database_servers
   become: yes
   tasks:
     - name: Update Cache
@@ -22,7 +22,7 @@
         state: present
 
     - name: Start MYSQL service
-      apt:
+      service:
         name: mysql
         state: started
         enabled: yes
@@ -32,3 +32,46 @@
         rule: allow
         port: 3306
         proto: tcp
+
+    - name: Create Database
+      mysql_db:
+        name: database01
+        state: present
+
+    - name: create database service account
+      mysql_user:
+        name: svc_db_table_creator
+        password: "Password01!"
+        priv: '*.*:ALL'
+        state: present
+        host: '%'
+
+    - name: Create Database Table
+      mysql_query:
+        login_user: svc_db_table_creator
+        login_password: "Password01!"
+        login_db: database01
+        query: "CREATE TABLE IF NOT EXISTS servers(servername VARCHAR(25),ipaddress VARCHAR(15));"
+      register: table_creation_result
+
+    - name: Check Table Creation Results
+      debug:
+        msg: "{{ table_creation_result }}"
+      when: table_creation_result
+
+    - name: Insert information in Database Table
+      mysql_query:
+        login_user: svc_db_table_creator
+        login_password: "Password01!"
+        login_db: database01
+        query: "INSERT INTO servers (servername) VALUES ('{{ ansible_hostname }}')"
+      register: insert_results
+      
+    - name: Restart MySQL service
+      service:
+          name: mysql
+          state: restarted
+          enabled: yes
+  
+      
+    
