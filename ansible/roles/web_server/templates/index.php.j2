@@ -1,12 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset=UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> {{ansible_hostname}} </title>
+    <title>{{ ansible_hostname }}</title>
+</head>
+<body>
+    <h1>Servername: {{ ansible_hostname }}</h1>
 
-    </head>
-    <body>
-        <h1> This is server: {{ansible_hostname}}</h1>
-    </body>
-    </html>
+    <?php
+    $username = "svc_db_table_creator";
+    $password = "Password01!";
+    $dbname = "database01";
+
+    // Target server(s)
+    $servername = "10.0.0.23"; 
+
+    // Check if servername is present
+    if (empty($servername)) {
+        die("Server name is not set.");
+    }
+
+    // Display servername
+    echo "<p>Database IP: $servername</p>";
+    echo "<br>";
+
+    // Connect to database
+    $conn = new mysqli($servername, $username, $password, $dbname);
+
+    if ($conn->connect_error) {
+        die("<p>Connection Failed: " . $conn->connect_error . "</p>");
+    }
+
+    // Execute Query
+    $sql = "SELECT servername, ipaddress FROM servers";
+    $result = $conn->query($sql);
+
+    if (!$result) {
+        die("<p>SQL-fout: " . $conn->error . "</p>");
+    }
+
+    // Process Results
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            echo "<p>Machine: " . $row["servername"] . " - IP: " . $row["ipaddress"] . "</p>";
+        }
+    } else {
+        echo "<p>No results found.</p>";
+    }
+
+    // Close Connection
+    $conn->close();
+    ?>
+</body>
+</html>

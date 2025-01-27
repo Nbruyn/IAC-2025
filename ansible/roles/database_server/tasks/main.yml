@@ -66,6 +66,13 @@
         login_db: database01
         query: "INSERT INTO servers (servername) VALUES ('{{ ansible_hostname }}')"
       register: insert_results
+
+    - name: Allow Remote Connection
+      lineinfile:
+        path: /etc/mysql/mysql.conf.d/mysqld.cnf
+        regex: '^bind-address\s=\s127.0.0.1'
+        line: 'bind-address = *'
+        backup: yes
       
     - name: Restart MySQL service
       service:
