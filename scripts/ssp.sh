@@ -1,15 +1,7 @@
 #!/bin/bash
 
-# Beveiligde bestandslocaties
-KLANTENLIJST="klantenlijst.txt"
-LOGFILE="audit.log"
-
-# Controleer of bestanden bestaan
-touch "$KLANTENLIJST" "$LOGFILE"
-chmod 600 "$KLANTENLIJST" "$LOGFILE"
-
-# Functie: Menu weergeven
-function show_menu () {
+# Toon het menu aan de gebruiker
+function show_menu() {
     echo "====================="
     echo " Self Service portal"
     echo "====================="
@@ -21,141 +13,79 @@ function show_menu () {
     echo -n "Maak een keuze [1-4]: "
 }
 
-# Functie: Nieuwe klantomgeving aanmaken
-function create_customer_environment () {
-    echo -n "Wat is uw klantnaam? "
-    read klantnaam
+# Functie om een nieuwe klantomgeving aan te maken
+function create_customer_environment() {
 
-    # Controleer op lege invoer
+    # Vraag klantnaam
+    read -p "Klantnaam: " klantnaam
+
+    # Controleer of invoer bij klantnaam leeg is
     if [[ -z "$klantnaam" ]]; then
         echo "Klantnaam mag niet leeg zijn."
         return 1
     fi
 
-    # Vraag omgevingstype
-    echo -n "Welke type omgeving wilt u uitrollen? (productie, acceptatie, test): "
-    read klantomgeving
+    # (Default omgeving)
+    klantomgeving="prod"
 
-    # Controleer op lege invoer
-    if [[ -z "$klantomgeving" ]]; then
-        echo "Omgevingstype mag niet leeg zijn."
+    # Aantal servers die dienen te worden uitgerold
+    read -p "Hoeveel webservers wilt u? (Max 9) " _server
+    read -p "Hoeveel cpu(s) per machine? (1 t/m 2) " _cpu
+    read -p "Hoeveel geheugen per machine? " _mem
+
+    # Doorvoeren keuzes
+    export SERVER="$_server"
+    export CPU="$_cpu"
+    export MEM="$_mem"
+
+    # Stel het pad in voor de omgeving
+    local PAD="/home/neville/IAC-2025/vagrant/klanten/$klantnaam/$klantomgeving"
+    # Stel het pad in voor SSH-sleutels
+    local SSH_PAD="/home/neville/IAC-2025/vagrant/klanten/$klantnaam/ssh"
+
+    # Controleer of de omgeving al bestaat
+    if [[ -d "$PAD" ]]; then
+        echo "De omgeving '$klantomgeving' voor klant '$klantnaam' bestaat al."
         return 1
     fi
 
-    # Validatie omgevingstype
-    if [[ ! "$klantomgeving" =~ ^(productie|acceptatie|test)$ ]]; then
-        echo "Ongeldig omgevingstype. Kies uit: productie, acceptatie of test."
-        return 1
-    fi
+    # Klantmappen aanmaken
+    mkdir -p "$PAD" "$SSH_PAD"
 
-    # Controleer of combinatie al bestaat
-    if grep -q "^$klantnaam:$klantomgeving$" "$KLANTENLIJST"; then
-        echo "Deze omgeving bestaat al voor klant '$klantnaam'."
-        return 1
-    fi
+    # Genereer Klant SSH-key
+    ssh-keygen -t rsa -b 2048 -f "$SSH_PAD/$klantnaam" -q -N ""
 
-    # Voeg klant en omgeving toe aan de lijst
-    echo "$klantnaam:$klantomgeving" >> "$KLANTENLIJST"
+    # Kopieer Vagrant template
+    cp "/home/neville/IAC-2025/vagrant/klanten/template/prod/Vagrantfile" "$PAD/Vagrantfile"
 
-    # Log de actie
-    echo "$(date +'%Y-%m-%d %H:%M:%S') - Klant '$klantnaam' heeft omgeving '$klantomgeving' aangevraagd." >> "$LOGFILE"
+    # Vervang placeholder ‘klantnaam’ in  Vagrantfile van de klant
+    sed -i "s+klantnaam+$klantnaam+g" "$PAD/Vagrantfile"
 
-    # Bevestig de actie
-    echo "De omgeving voor klant '$klantnaam' van het type '$klantomgeving' wordt aangemaakt."
+    # Ga naar de klant directory (nu dat het bestaat) en start de VM
+    cd "$PAD" || { echo "Kan niet naar directory $PAD wisselen."; return 1; }
+    vagrant up
 }
 
-# Functie: Bestaande klantomgeving aanpassen
-function adjust_customer_environment () {
-    echo -n "Wat is uw klantnaam? "
-    read klantnaam
-
-    # Controleer op lege invoer
-    if [[ -z "$klantnaam" ]]; then
-        echo "Klantnaam mag niet leeg zijn."
-        return 1
-    fi
-
-    # Controleer of klant bestaat
-    if ! grep -q "^$klantnaam:" "$KLANTENLIJST"; then
-        echo "Klant '$klantnaam' bestaat niet. U kunt geen omgeving aanpassen."
-        return 1
-    fi
-
-    # Vraag omgevingstype
-    echo -n "Welke type omgeving wilt u aanpassen? (productie, acceptatie, test): "
-    read klantomgeving
-
-    # Controleer op lege invoer
-    if [[ -z "$klantomgeving" ]]; then
-        echo "Omgevingstype mag niet leeg zijn."
-        return 1
-    fi
-
-    # Validatie omgevingstype
-    if [[ ! "$klantomgeving" =~ ^(productie|acceptatie|test)$ ]]; then
-        echo "Ongeldig omgevingstype. Kies uit: productie, acceptatie of test."
-        return 1
-    fi
-
-    # Log action
-    echo "$(date +'%Y-%m-%d %H:%M:%S') - Klantomgeving '$klantomgeving' is aangevraagd door klant '$klantnaam'." >> "$LOGFILE"
-
-    # Bevestig de actie
-    echo "De omgeving voor klant '$klantnaam' is aangepast naar '$klantomgeving'."
-}
-
-# Functie: Klantomgeving verwijderen
-function delete_customer_environment () {
-    echo -n "Wat is de naam van de omgeving die u wilt verwijderen? "
-    read env_name
-
-    # Controleer op lege invoer
-    if [[ -z "$env_name" ]]; then
-        echo "De naam mag niet leeg zijn."
-        return 1
-    fi
-
-    # Controleer of omgeving in klantenlijst bestaat
-    if ! grep -q "^$env_name" "$KLANTENLIJST"; then
-        echo "Deze omgeving bestaat niet volgens de klantenlijst."
-        return 1
-    fi
-
-    # Vraag om bevestiging
-    echo -n "Weet u zeker dat u de serveromgeving '$env_name' wilt verwijderen? (ja/nee): "
-    read confirm
-
-    if [[ "$confirm" == "ja" ]]; then
-        # Verwijder de omgeving en log de actie
-        sed -i "/^$env_name/d" "$KLANTENLIJST"
-        echo "$(date +'%Y-%m-%d %H:%M:%S') - Serveromgeving '$env_name' is verwijderd." >> "$LOGFILE"
-        echo "De serveromgeving '$env_name' is succesvol verwijderd."
-    else
-        echo "Actie geannuleerd. Geen wijzigingen doorgevoerd."
-    fi
-}
-
-# Hoofdscript: Keuzemenu
+# Hoofdmenu
 while true; do
     show_menu
-    read keuze
-
-    case $keuze in
+    read -r keuze
+    case "$keuze" in
         1)
             create_customer_environment
             ;;
         2)
-            adjust_customer_environment
+            echo "Functie nog niet geïmplementeerd."
             ;;
         3)
-            delete_customer_environment
+            echo "Functie nog niet geïmplementeerd."
             ;;
         4)
             echo "Afsluiten..."
             exit 0
             ;;
         *)
-            echo "Ongeldige keuze. Probeer het opnieuw."
+            echo "Ongeldige keuze."
             ;;
     esac
 done

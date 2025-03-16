@@ -1,0 +1,90 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  
+  #Prevent Vagrant from auto generating SSH-key
+    config.ssh.insert_key = false
+  
+  #Path to generated SSH-key
+  config.ssh.private_key_path = ["/home/neville/IAC-2025/vagrant/klanten/klantnaam/ssh/sarah.pub","~/.vagrant.d/insecure_private_key"]
+  
+  #Server_variables
+    SERVER = ENV['SERVER'].to_i  # Aantal servers
+    CPU = ENV['CPU'].to_i        # Aantal CPU's per server
+    MEM = ENV['MEM'].to_i        # Geheugen per server (in MB)
+  
+  # Uitrollen web servers
+    (1..SERVER).each do |i|
+      config.vm.define "prune-acc-web#{i}" do |acc_web_config|
+      # Gebruik Vagrant box Ubuntu 18.04 Bionic Beaver).
+        acc_web_config.vm.box = "ubuntu/bionic64"
+      # VM hostnaam.
+        acc_web_config.vm.hostname = "prune-acc-web#{i}"
+      # VM-netwerkinstellingen.
+        acc_web_config.vm.network :private_network, ip: "10.0.16.2#{i}"
+      # Kopieer public key naar de geautoriseerde sleutels op de VM.
+        acc_web_config.vm.provision "file", source: "/home/neville/IAC-2025/vagrant/Klanten/prune/ssh/prune.pub", destination: "~/.ssh/authorized_keys"
+      # VirtualBox-specifieke instellingen.
+        acc_web_config.vm.provider "virtualbox" do |acc_web_vm|
+      # Aantal CPU's per web-vm.    
+          acc_web_vm.cpus = CPU
+      # Hoeveelheid Geheugen (RAM) per web-vm. 
+          acc_web_vm.memory  = MEM
+      # Schakel VirtualBox-GUI uit.
+          acc_web_vm.gui = false
+      #  Instellen vm-naam. 
+          acc_web_vm.name = "prune-acc-web#{i}"
+        end
+      end
+    end
+  
+    # Uitrollen databaseserver(s)
+    (1..SERVER).each do |i|
+      config.vm.define "prune-acc-db#{i}" do |acc_db_config|
+    # Vagrant box Ubuntu 18.04 Bionic Beaver).
+        acc_db_config.vm.box = "ubuntu/bionic64"
+    # VM hostnaam.
+        acc_db_config.vm.hostname = "prune-acc-db#{i}"
+    # VM-netwerkinstellingen.
+        acc_db_config.vm.network :private_network, ip: "10.0.16.2#{i}"
+    # Kopieer public key naar de geautoriseerde sleutels op de VM.    
+        acc_db_config.vm.provision "file", source: "/home/student/IAC/vagrant/Klanten/prune/ssh/prune.pub", destination: "~/.ssh/authorized_keys"
+    # VirtualBox-specifieke instellingen.
+        acc_db_config.vm.provider "virtualbox" do |acc_web_vm|
+    # Aantal CPU's per db-vm.   
+        acc_db_vm.cpus = CPU
+    # Hoeveelheid Geheugen (RAM) per db-vm.
+        acc_db_vm.memory  = MEM
+    # Schakel VirtualBox-GUI uit.
+        acc_db_vm.gui = false
+    #  Instellen vm-naam.
+        acc_db_vm.name = "prune-acc-db#{i}"
+        end
+      end
+    end
+  
+    # Uitrollen load balancer(s)
+    (1..SERVER).each do |i|
+      config.vm.define "prune-acc-lb#{i}" do |acc_lb_config|
+    # Vagrant box Ubuntu 18.04 Bionic Beaver). 
+        acc_lb_config.vm.box = "ubuntu/bionic64"
+    # VM hostnaam.
+        acc_lb_config.vm.hostname = "prune-acc-lb#{i}"
+    # VM-netwerkinstellingen.
+        acc_lb_config.vm.network :private_network, ip: "10.0.16.2#{i}"
+    # Kopieer public key naar de geautoriseerde sleutels op de VM.    
+        acc_lb_config.vm.provision "file", source: "/home/student/IAC/vagrant/Klanten/prune/ssh/prune.pub", destination: "~/.ssh/authorized_keys"
+    # VirtualBox-specifieke instellingen.    
+        acc_lb_config.vm.provider "virtualbox" do |acc_lb_vm|
+    # Aantal CPU's per lb-vm.   
+        acc_lb_vm.cpus = CPU
+    # Hoeveelheid Geheugen (RAM) per lb-vm.
+        acc_lb_vm.memory  = MEM
+    # Schakel VirtualBox-GUI uit.
+        acc_lb_vm.gui = false
+    #  Instellen vm-naam.
+        acc_lb_vm.name = "prune-acc-lb#{i}"
+        end
+      end
+    end
