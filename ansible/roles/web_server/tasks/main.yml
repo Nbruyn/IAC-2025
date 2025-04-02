@@ -1,57 +1,71 @@
 ---
-- hosts: web_servers
+- name: Update Cache
+  apt:
+    update_cache: true
   become: yes
-  tasks:
-    - name: Update Cache
-      apt:
-        update_cache: true
 
-    - name: Install Apache
-      apt:
-        name: apache2
-        state: present
+- name: Install Apache
+  apt:
+    name: apache2
+    state: present
+  become: yes
 
-    - name: Open port 80 for web traffic
-      community.general.ufw:
-        rule: allow
-        port: 80
-        proto: tcp
+- name: Open port 80 for web traffic
+  community.general.ufw:
+    rule: allow
+    port: 80
+    proto: tcp
+  become: yes
 
-    - name: Install php
-      apt:
-        name: php
-        state: present
+- name: Install PHP
+  apt:
+    name: php
+    state: present
+  become: yes
 
-    - name: Install php-mysql
-      apt:
-        name: php-mysql
-        state: present
+- name: Install PHP-MySQL
+  apt:
+    name: php-mysql
+    state: present
+  become: yes
 
-    - name: Install mysql-client
-      apt:
-        name: mysql-client
+- name: Install MySQL Client
+  apt:
+    name: mysql-client
+  become: yes
 
-    - name: Open port 3306 for MYSQL database
-      community.general.ufw:
-        rule: allow
-        port: 3306
-        proto: tcp
+- name: Set IP addresses variable
+  set_fact:
+    ip_addresses: "{{ groups['DB'] | map('extract', hostvars, ['ansible_host']) | list }}"
 
-    - name: Remove Default index.html
-      file:
-        path: "/var/www/html/index.html"
-        state: absent
+- name: Debug IP addresses
+  debug:
+    var: ip_addresses
 
+- name: Open port 3306 for MySQL database
+  community.general.ufw:
+    rule: allow
+    port: 3306
+    proto: tcp
+  become: yes
 
-    - name: Deploy basic index.php
-      template:
-        src: "~/IAC-2025/ansible/roles/web_server//templates/index.php.j2"
-        dest: "/var/www/html/index.php"
-        owner: "www-data"
-        group: "www-data"
-        mode: "0644"
+- name: Remove Default index.html
+  file:
+    path: "/var/www/html/index.html"
+    state: absent
+  become: yes
 
-    - name: restart apache
-      service:
-        name: apache2
-        state: restarted
+- name: Deploy basic index.php
+  template:
+    src: "~/IAC-2025/ansible/roles/web_server/templates/index.php.j2"
+    dest: "/var/www/html/index.php"
+    owner: "www-data"
+    group: "www-data"
+    mode: "0644"
+  become: yes
+
+- name: Restart Apache
+  service:
+    name: apache2
+    state: restarted
+  become: yes

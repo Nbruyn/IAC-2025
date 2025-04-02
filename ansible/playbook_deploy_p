@@ -1,0 +1,27 @@
+#Playbook voor uitrollen productie omgeving
+---
+- name: gathering information
+  hosts: WEB
+  gather_facts: true
+
+- name: Installing webserver
+  hosts: WEB
+  become: yes
+
+  roles:
+    - web_server
+
+- name: Installing loadbalancer
+  hosts: LB
+  become: yes
+
+  roles:
+    - loadbalancer
+
+- name: installing database
+  hosts: DB
+  become: yes
+  
+  roles:
+    - database_server
+

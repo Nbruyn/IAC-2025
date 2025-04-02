@@ -13,9 +13,81 @@ function show_menu() {
     echo -n "Maak een keuze [1-4]: "
 }
 
+# Functie klant-ip genereren
+function f_clientnumber() {
+    local file_path="/home/neville/IAC-2025/vagrant/klanten/template/clientnumber.txt"
+    
+    [[ ! -f "$file_path" ]] && echo 9 > "$file_path"
+
+    clientnumber=$(($(cat "$file_path") + 1))
+    echo "$clientnumber" | tee "$file_path"
+}
+
+# Functie ansible inventory file
+function _ansible_inventory() {
+
+    local klantenpad="/home/neville/IAC-2025/vagrant/klanten/${klantnaam}/${klantomgeving}"
+    local inventory_file="${klantenpad}/inventory.ini"
+
+    # Kopieer de juiste inventory template
+    if [[ "$klantomgeving" == "productie" ]]; then
+        cp "/home/neville/IAC-2025/ansible/inventories/inventory_p.ini" "$inventory_file"
+        local host_suffix="-p"
+    else
+        cp "/home/neville/IAC-2025/ansible/inventories/inventory_t.ini" "$inventory_file"
+        local host_suffix="-t"
+    fi
+
+    # Stel IP-prefix in afhankelijk van omgeving
+    local ip_prefix=""
+    if [[ "$klantomgeving" == "productie" ]]; then
+        ip_prefix="10.0.${clientnumber}.2"  # bijv: 10.0.9.21, 10.0.9.22
+    else
+        ip_prefix="10.0.${clientnumber}.1"  # bijv: 10.0.9.11, 10.0.9.12
+    fi
+
+    # Voeg [WEB] groep toe aan inventory (indien niet aanwezig)
+    echo "[WEB]" >> "$inventory_file"
+
+    # Voeg webservers toe
+    for ((i = 1; i <= SERVER; i++)); do
+        echo "${klantnaam}${host_suffix}-web${i} ansible_host=${ip_prefix}${i}" >> "$inventory_file"
+    done
+
+    # Pas placeholders aan in het bestand
+    sed -i "s/klantnaam/${klantnaam}/g" "$inventory_file"
+    sed -i "s/\.ip\./.${clientnumber}./g" "$inventory_file"
+}
+
+# Functie key-scan
+function f_keyscan() {
+    local INVENTORY_FILE="/home/neville/IAC-2025/vagrant/klanten/${klantnaam}/${klantomgeving}/inventory.ini"
+
+    if [[ ! -f "$INVENTORY_FILE" ]]; then
+        echo "Inventory file not found: $INVENTORY_FILE"
+        return 1
+    fi
+
+    # Gather the IP addresses from the inventory file
+    local ip_addresses
+    ip_addresses=$(awk -F'=' '/ansible_host/ {
+        gsub(/[[:blank:]]/, "", $2)
+        print $2
+    }' "$INVENTORY_FILE")
+
+    for ip in $ip_addresses; do
+        echo "Running ssh-keyscan for $ip"
+        ssh-keyscan -H "$ip" >> ~/.ssh/known_hosts 2>/dev/null
+        if [[ $? -ne 0 ]]; then
+            echo "Error running ssh-keyscan for $ip"
+        fi
+    done
+
+    echo "SSH key scanning completed."
+}
+
 # Functie om een nieuwe klantomgeving aan te maken
 function create_customer_environment() {
-
     # Vraag klantnaam
     read -p "Klantnaam: " klantnaam
 
@@ -25,45 +97,89 @@ function create_customer_environment() {
         return 1
     fi
 
-    # (Default omgeving)
-    klantomgeving="prod"
+    # Vraagt klant welke omgeving hij wil uitrollen ( productie of test )
+    read -p "Omgevingstype (productie, test): " klantomgeving
+    if [[ ! "$klantomgeving" =~ ^(productie|test)$ ]]; then
+        echo "Ongeldig type."
+        return 1
+    fi
 
     # Aantal servers die dienen te worden uitgerold
     read -p "Hoeveel webservers wilt u? (Max 9) " _server
     read -p "Hoeveel cpu(s) per machine? (1 t/m 2) " _cpu
     read -p "Hoeveel geheugen per machine? " _mem
 
-    # Doorvoeren keuzes
-    export SERVER="$_server"
-    export CPU="$_cpu"
-    export MEM="$_mem"
+#keuze doorvoeren
+export SERVER="$_server"
+export CPU="$_cpu"
+export MEM="$_mem"
 
     # Stel het pad in voor de omgeving
-    local PAD="/home/neville/IAC-2025/vagrant/klanten/$klantnaam/$klantomgeving"
-    # Stel het pad in voor SSH-sleutels
-    local SSH_PAD="/home/neville/IAC-2025/vagrant/klanten/$klantnaam/ssh"
+    local PAD="/home/neville/IAC-2025/vagrant/klanten/${klantnaam}/${klantomgeving}"
+    local SSH_PAD="/home/neville/IAC-2025/vagrant/klanten/${klantnaam}/ssh"
 
     # Controleer of de omgeving al bestaat
     if [[ -d "$PAD" ]]; then
-        echo "De omgeving '$klantomgeving' voor klant '$klantnaam' bestaat al."
+        echo "De omgeving '${klantomgeving}' voor klant '${klantnaam}' bestaat al."
         return 1
     fi
 
-    # Klantmappen aanmaken
+    # Maak klantmappen aan
     mkdir -p "$PAD" "$SSH_PAD"
 
     # Genereer Klant SSH-key
     ssh-keygen -t rsa -b 2048 -f "$SSH_PAD/$klantnaam" -q -N ""
 
     # Kopieer Vagrant template
-    cp "/home/neville/IAC-2025/vagrant/klanten/template/prod/Vagrantfile" "$PAD/Vagrantfile"
+    if [[ "$klantomgeving" == "productie" ]]; then
+        cp "/home/neville/IAC-2025/vagrant/klanten/template/prod/Vagrantfile" "$PAD/Vagrantfile"
+    else
+        cp "/home/neville/IAC-2025/vagrant/klanten/template/test/Vagrantfile" "$PAD/Vagrantfile"
+    fi
 
-    # Vervang placeholder ‘klantnaam’ in  Vagrantfile van de klant
-    sed -i "s+klantnaam+$klantnaam+g" "$PAD/Vagrantfile"
+    clientnumber=$(f_clientnumber)
+    
+    echo "DEBUG: clientnumber=${clientnumber}"
 
-    # Ga naar de klant directory (nu dat het bestaat) en start de VM
+    # Vervang placeholder ‘klantnaam’ in Vagrantfile
+    sed -i "s+klantnaam+${klantnaam}+g" "$PAD/Vagrantfile"
+    sed -i "s+_ip+$clientnumber+g" "$PAD/Vagrantfile"
+
+    # Ga naar de klant directory en start de VM
     cd "$PAD" || { echo "Kan niet naar directory $PAD wisselen."; return 1; }
-    vagrant up
+    vagrant halt
+    vagrant up --provision
+
+    # Clear known hosts
+    > /home/neville/.ssh/known_hosts
+
+    # Roep ansible Ansible inventory functie aan 
+    _ansible_inventory
+
+    # Key-scan
+    f_keyscan
+
+    # Toon IPs en voer eventueel playbooks uit
+    if [[ "$klantomgeving" == "test" ]]; then
+        for ((i=1; i <= SERVER; i++)); do
+            echo "Uw webserver IP(s) zijn: 10.0.${clientnumber}.${i}"
+        done
+        cd "/home/neville/IAC-2025/ansible/"
+        ansible-playbook -i "/home/neville/IAC-2025/vagrant/klanten/${klantnaam}/test/inventory.ini" playbook_deploy_t
+    else
+        # production
+        for ((i=1; i <= SERVER; i++)); do
+            echo "Uw webserver IP is: 10.0.${clientnumber}.2${i}"
+        done
+        echo "Uw lbserver IP is: 10.0.${clientnumber}.31"
+        echo "Uw dbserver IP is: 10.0.${clientnumber}.41"
+
+        cd "/home/neville/IAC-2025/ansible/"
+        ansible-playbook -i "/home/neville/IAC-2025/vagrant/klanten/${klantnaam}/productie/inventory.ini" playbook_deploy_p
+    fi
+
+    # Optional: use `return` if you want to come back to the main menu
+    return 0
 }
 
 # Hoofdmenu

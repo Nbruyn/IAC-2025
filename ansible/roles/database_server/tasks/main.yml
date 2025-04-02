@@ -1,71 +1,78 @@
 ---
-- hosts: database_servers
-  become: yes
-  tasks:
     - name: Update Cache
       apt:
         update_cache: true
+      become: yes
 
-    - name: Python-mysql
+    - name: Install Python MySQL Library
       apt:
         name: python3-mysqldb
         state: present
+      become: yes
 
     - name: Install libmysqlclient-dev
       apt:
         name: libmysqlclient-dev
         state: present
+      become: yes
 
-    - name: Install MYSQL
+    - name: Install MySQL Server
       apt:
         name: mysql-server
         state: present
+      become: yes
 
-    - name: Start MYSQL service
+    - name: Start MySQL service
       service:
         name: mysql
         state: started
         enabled: yes
+      become: yes
 
-    - name: Open port 3306 for MYSQL
+    - name: Open port 3306 for MySQL
       community.general.ufw:
         rule: allow
         port: 3306
         proto: tcp
+      become: yes
 
     - name: Create Database
       mysql_db:
         name: database01
         state: present
-
-    - name: create database service account
+      become: yes
+      
+    - name: Create Database Service Account
       mysql_user:
         name: svc_db_table_creator
         password: "Password01!"
         priv: '*.*:ALL'
         state: present
         host: '%'
+      become: yes
 
     - name: Create Database Table
       mysql_query:
         login_user: svc_db_table_creator
         login_password: "Password01!"
         login_db: database01
-        query: "CREATE TABLE IF NOT EXISTS servers(servername VARCHAR(25),ipaddress VARCHAR(15));"
+        query: "CREATE TABLE IF NOT EXISTS servers(servername VARCHAR(25), ipaddress VARCHAR(15));"
       register: table_creation_result
+      become: yes
 
     - name: Check Table Creation Results
       debug:
         msg: "{{ table_creation_result }}"
-      when: table_creation_result
+      when: table_creation_result.changed
 
-    - name: Insert information in Database Table
+    - name: Insert Information in Database Table
       mysql_query:
         login_user: svc_db_table_creator
         login_password: "Password01!"
         login_db: database01
-        query: "INSERT INTO servers (servername) VALUES ('{{ ansible_hostname }}')"
+        query: "INSERT INTO servers (servername) VALUES ('{{ ansible_hostname }}');"
       register: insert_results
+      become: yes
 
     - name: Allow Remote Connection
       lineinfile:
@@ -73,12 +80,11 @@
         regex: '^bind-address\s=\s127.0.0.1'
         line: 'bind-address = *'
         backup: yes
+      become: yes
       
     - name: Restart MySQL service
       service:
-          name: mysql
-          state: restarted
-          enabled: yes
-  
-      
-    
+        name: mysql
+        state: restarted
+        enabled: yes
+      become: yes

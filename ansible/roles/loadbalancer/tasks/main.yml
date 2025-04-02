@@ -1,22 +1,23 @@
 ---
-- hosts: 10.0.0.22
+- name: Update Cache
+  apt:
+    update_cache: true
   become: yes
-  tasks:
-    - name: Update Cache
-      apt:
-        update_cache: true
 
-    - name: Install haproxy
-      apt:
-        name: haproxy
-        state: present
+- name: Install HAProxy
+  apt:
+    name: haproxy
+    state: present
+  become: yes
 
-    - name: Configure haproxy
-      template:
-        src: "~/IAC-2025/ansible/roles/loadbalancer/templates/haproxy.cfg.j2"
-        dest: "/etc/haproxy/haproxy.cfg"
+- name: Configure HAProxy
+  template:
+    src: "~/IAC-2025/ansible/roles/loadbalancer/templates/haproxy.cfg.j2"
+    dest: "/etc/haproxy/haproxy.cfg"
+  become: yes
 
-    - name: haproxy restart
-      service:
-        name: haproxy
-        state: restarted
+- name: Restart HAProxy
+  service:
+    name: haproxy
+    state: restarted
+  become: yes

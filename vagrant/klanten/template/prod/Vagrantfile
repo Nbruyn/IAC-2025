@@ -22,7 +22,7 @@ config.ssh.private_key_path = ["/home/neville/IAC-2025/vagrant/klanten/klantnaam
     # VM hostnaam.
       prod_web_config.vm.hostname = "klantnaam-prod-web#{i}"
     # VM-netwerkinstellingen.
-      prod_web_config.vm.network :private_network, ip: "10.0.16.2#{i}"
+      prod_web_config.vm.network :private_network, ip: "10.0._ip.2#{i}"
     # Kopieer public key naar de geautoriseerde sleutels op de VM.
       prod_web_config.vm.provision "file", source: "/home/neville/IAC-2025/vagrant/klanten/klantnaam/ssh/klantnaam.pub", destination: "~/.ssh/authorized_keys"
     # VirtualBox-specifieke instellingen.
@@ -47,7 +47,7 @@ config.ssh.private_key_path = ["/home/neville/IAC-2025/vagrant/klanten/klantnaam
   # VM hostnaam.
       prod_db_config.vm.hostname = "klantnaam-prod-db#{i}"
   # VM-netwerkinstellingen.
-      prod_db_config.vm.network :private_network, ip: "10.0.16.2#{i}"
+      prod_db_config.vm.network :private_network, ip: "10.0._ip.3#{i}"
   # Kopieer public key naar de geautoriseerde sleutels op de VM.    
       prod_db_config.vm.provision "file", source: "/home/neville/IAC-2025/vagrant/klanten/klantnaam/ssh/klantnaam.pub", destination: "~/.ssh/authorized_keys"
   # VirtualBox-specifieke instellingen.
@@ -72,7 +72,7 @@ config.ssh.private_key_path = ["/home/neville/IAC-2025/vagrant/klanten/klantnaam
   # VM hostnaam.
       prod_lb_config.vm.hostname = "klantnaam-prod-lb#{i}"
   # VM-netwerkinstellingen.
-      prod_lb_config.vm.network :private_network, ip: "10.0.16.2#{i}"
+      prod_lb_config.vm.network :private_network, ip: "10.0._ip.4#{i}"
   # Kopieer public key naar de geautoriseerde sleutels op de VM.    
       prod_lb_config.vm.provision "file", source: "/home/neville/IAC-2025/vagrant/klanten/klantnaam/ssh/klantnaam.pub", destination: "~/.ssh/authorized_keys"
   # VirtualBox-specifieke instellingen.    

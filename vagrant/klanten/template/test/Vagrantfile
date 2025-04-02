@@ -3,32 +3,28 @@
 
 Vagrant.configure("2") do |config|
   
-  #Uitschakelen automatisch SSH-key generen in Vagrant  
+#Prevent Vagrant from auto generating SSH-key
   config.ssh.insert_key = false
 
-#SSH-key pad 
-config.ssh.private_key_path = ["/home/neville/IAC-2025/vagrant/klanten/klantnaam/ssh/klantnaam","~/.vagrant.d/insecure_private_key"]
+#Path to generated SSH-key
+config.ssh.private_key_path = ["/home/neville/IAC-2025/vagrant/klanten/klantnaam/ssh/klantnaam.pub","~/.vagrant.d/insecure_private_key"]
 
 #Server_variables
+  SERVER = ENV['SERVER'].to_i  # Aantal servers
+  CPU = ENV['CPU'].to_i        # Aantal CPU's per server
+  MEM = ENV['MEM'].to_i        # Geheugen per server (in MB)
 
-# Aantal servers
-  SERVER = ENV['SERVER'].to_i
-# Aantal CPU's per server    
-  CPU = ENV['CPU'].to_i  
-  # Geheugen per server (in MB)      
-  MEM = ENV['MEM'].to_i
-          
 # Uitrollen web servers
   (1..SERVER).each do |i|
-    config.vm.define "prune-test-web#{i}" do |test_web_config|
-    # Vagrant box Ubuntu 18.04 Bionic Beaver).
+    config.vm.define "klantnaam-test-web#{i}" do |test_web_config|
+    # Gebruik Vagrant box Ubuntu 18.04 Bionic Beaver).
       test_web_config.vm.box = "ubuntu/bionic64"
     # VM hostnaam.
-      test_web_config.vm.hostname = "prune-test-web#{i}"
+      test_web_config.vm.hostname = "klantnaam-test-web#{i}"
     # VM-netwerkinstellingen.
-      test_web_config.vm.network :private_network, ip: "10.0.16.2#{i}"
+      test_web_config.vm.network :private_network, ip: "10.0._ip.1#{i}"
     # Kopieer public key naar de geautoriseerde sleutels op de VM.
-      test_web_config.vm.provision "file", source: "/home/neville/IAC-2025/vagrant/Klanten/prune/ssh/prune.pub", destination: "~/.ssh/authorized_keys"
+      test_web_config.vm.provision "file", source: "/home/neville/IAC-2025/vagrant/klanten/klantnaam/ssh/klantnaam.pub", destination: "~/.ssh/authorized_keys"
     # VirtualBox-specifieke instellingen.
       test_web_config.vm.provider "virtualbox" do |test_web_vm|
     # Aantal CPU's per web-vm.    
@@ -38,60 +34,10 @@ config.ssh.private_key_path = ["/home/neville/IAC-2025/vagrant/klanten/klantnaam
     # Schakel VirtualBox-GUI uit.
         test_web_vm.gui = false
     #  Instellen vm-naam. 
-        test_web_vm.name = "prune-test-web#{i}"
+        test_web_vm.name = "klantnaam-test-web#{i}"
       end
     end
   end
-
-  # Uitrollen databaseserver(s)
-  (1..SERVER).each do |i|
-    config.vm.define "prune-test-db#{i}" do |test_db_config|
-  # Vagrant box Ubuntu 18.04 Bionic Beaver).
-      test_db_config.vm.box = "ubuntu/bionic64"
-  # VM hostnaam.
-      test_db_config.vm.hostname = "prune-test-db#{i}"
-  # VM-netwerkinstellingen.
-      test_db_config.vm.network :private_network, ip: "10.0.16.2#{i}"
-  # Kopieer public key naar de geautoriseerde sleutels op de VM.    
-      test_db_config.vm.provision "file", source: "/home/student/IAC/vagrant/Klanten/prune/ssh/prune.pub", destination: "~/.ssh/authorized_keys"
-  # VirtualBox-specifieke instellingen.
-      test_db_config.vm.provider "virtualbox" do |test_db_vm|
-  # Aantal CPU's per db-vm.   
-        test_db_vm.cpus = CPU
-  # Hoeveelheid Geheugen (RAM) per db-vm.
-        test_db_vm.memory  = MEM
-  # Schakel VirtualBox-GUI uit.
-        test_db_vm.gui = false
-  #  Instellen vm-naam.
-        test_db_vm.name = "prune-test-db#{i}"
-      end
-    end
-  end
-
-  # Uitrollen load balancer(s)
-  (1..SERVER).each do |i|
-    config.vm.define "prune-test-lb#{i}" do |test_lb_config|
-  # Vagrant box Ubuntu 18.04 Bionic Beaver). 
-      test_lb_config.vm.box = "ubuntu/bionic64"
-  # VM hostnaam.
-      test_lb_config.vm.hostname = "prune-test-lb#{i}"
-  # VM-netwerkinstellingen.
-      test_lb_config.vm.network :private_network, ip: "10.0.16.2#{i}"
-  # Kopieer public key naar de geautoriseerde sleutels op de VM.    
-      test_lb_config.vm.provision "file", source: "/home/student/IAC/vagrant/Klanten/prune/ssh/prune.pub", destination: "~/.ssh/authorized_keys"
-  # VirtualBox-specifieke instellingen.    
-      test_lb_config.vm.provider "virtualbox" do |test_lb_vm|
-  # Aantal CPU's per lb-vm.   
-        test_lb_vm.cpus = CPU
-  # Hoeveelheid Geheugen (RAM) per lb-vm.
-        test_lb_vm.memory  = MEM
-  # Schakel VirtualBox-GUI uit.
-        test_lb_vm.gui = false
-  #  Instellen vm-naam.
-        test_lb_vm.name = "prune-test-lb#{i}"
-      end
-    end
-  end
- 
-  
 end
+
+ 
