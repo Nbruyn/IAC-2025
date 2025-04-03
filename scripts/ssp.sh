@@ -46,9 +46,7 @@ function _ansible_inventory() {
         ip_prefix="10.0.${clientnumber}.1"  # bijv: 10.0.9.11, 10.0.9.12
     fi
 
-    # Voeg [WEB] groep toe aan inventory
-
-    # Voeg webservers toe
+    # Voeg webservers toe aan inventory
     for ((i = 1; i <= SERVER; i++)); do
         echo "${klantnaam}${host_suffix}-web${i} ansible_host=${ip_prefix}${i}" >> "$inventory_file"
     done
@@ -112,7 +110,6 @@ function f_destroy() {
         if [[ -d "$klantpad/test" ]]; then
             echo "Testomgeving stoppen..."
             cd "$klantpad/test"
-            vagrant halt
             echo "Verwijder testomgeving..."
             vagrant destroy -f
             rm -rf "$klantpad/test"
@@ -125,7 +122,6 @@ function f_destroy() {
         if [[ -d "$klantpad/productie" ]]; then
             echo "Productieomgeving stoppen..."
             cd "$klantpad/productie"
-            vagrant halt
             echo "Verwijder productieomgeving..."
             vagrant destroy -f
             rm -rf "$klantpad/productie"
@@ -141,9 +137,11 @@ function f_destroy() {
     fi
 
 
+  cd "/home/neville/IAC-2025/vagrant/klanten/prune"
+# Artificacts opruimen
+vagrant global-status --prune
+
 }
-
-
 
 # Functie om een nieuwe klantomgeving aan te maken
 function create_customer_environment() {
