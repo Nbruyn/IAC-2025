@@ -5,9 +5,9 @@ function show_menu() {
     echo "====================="
     echo " Self Service portal"
     echo "====================="
-    echo "1. Nieuwe omgeving uitrollen"
-    echo "2. Omgeving aanpassen"
-    echo "3. Omgeving verwijderen"
+    echo "1. Nieuwe omgeving(en) uitrollen"
+    echo "2. Omgeving(en) aanpassen"
+    echo "3. Omgeving(en) verwijderen"
     echo "4. Afsluiten"
     echo "====================="
     echo -n "Maak een keuze [1-4]: "
@@ -46,8 +46,7 @@ function _ansible_inventory() {
         ip_prefix="10.0.${clientnumber}.1"  # bijv: 10.0.9.11, 10.0.9.12
     fi
 
-    # Voeg [WEB] groep toe aan inventory (indien niet aanwezig)
-    echo "[WEB]" >> "$inventory_file"
+    # Voeg [WEB] groep toe aan inventory
 
     # Voeg webservers toe
     for ((i = 1; i <= SERVER; i++)); do
@@ -85,6 +84,66 @@ function f_keyscan() {
 
     echo "SSH key scanning completed."
 }
+
+#Functie klantomgeving(en) verwijderen
+function f_destroy() {
+    read -p "Welke klant wilt u verwijderen? " _klantnaam
+
+    local klantpad="/home/neville/IAC-2025/vagrant/klanten/${_klantnaam}"
+    if [[ ! -d "$klantpad" ]]; then
+        echo "Klant '${_klantnaam}' bestaat niet."
+        return 1
+    fi
+
+    echo "Welke omgeving(en) wilt u verwijderen? '${_klantnaam}'?"
+    echo "1. testomgeving"
+    echo "2. productieomgeving"
+    echo "3. testomgeving & productieomgeving"
+    echo -n "Maak een keuze [1-3]: "
+    read keuze
+
+    read -p "Weet u zeker dat u wilt doorgaan met verwijderen? (y/n): " bevestiging
+    if [[ "$bevestiging" != "y" && "$bevestiging" != "Y" ]]; then
+        echo "Verwijderen geannuleerd."
+        return
+    fi
+
+    if [[ "$keuze" == "1" || "$keuze" == "3" ]]; then
+        if [[ -d "$klantpad/test" ]]; then
+            echo "Testomgeving stoppen..."
+            cd "$klantpad/test"
+            vagrant halt
+            echo "Verwijder testomgeving..."
+            vagrant destroy -f
+            rm -rf "$klantpad/test"
+        else
+            echo "Geen testomgeving gevonden."
+        fi
+    fi
+
+    if [[ "$keuze" == "2" || "$keuze" == "3" ]]; then
+        if [[ -d "$klantpad/productie" ]]; then
+            echo "Productieomgeving stoppen..."
+            cd "$klantpad/productie"
+            vagrant halt
+            echo "Verwijder productieomgeving..."
+            vagrant destroy -f
+            rm -rf "$klantpad/productie"
+        else
+            echo "Geen productieomgeving gevonden."
+        fi
+    fi
+
+    # Verwijder klantmap als test én productie verwijderd zijn
+    if [[ ! -d "$klantpad/test" && ! -d "$klantpad/productie" ]]; then
+        echo "Verwijder klantdirectory..."
+        rm -rf "$klantpad"
+    fi
+
+
+}
+
+
 
 # Functie om een nieuwe klantomgeving aan te maken
 function create_customer_environment() {
@@ -127,8 +186,15 @@ export MEM="$_mem"
     # Maak klantmappen aan
     mkdir -p "$PAD" "$SSH_PAD"
 
-    # Genereer Klant SSH-key
+ # Genereer Klant SSH-key (alleen als deze nog niet bestaat)
+if [[ ! -f "$SSH_PAD/$klantnaam" ]]; then
+    echo "Genereer SSH key voor ${klantnaam}..."
     ssh-keygen -t rsa -b 2048 -f "$SSH_PAD/$klantnaam" -q -N ""
+else
+    echo "SSH key voor ${klantnaam} bestaat al, hergebruiken..."
+fi
+   
+    
 
     # Kopieer Vagrant template
     if [[ "$klantomgeving" == "productie" ]]; then
@@ -194,7 +260,7 @@ while true; do
             echo "Functie nog niet geïmplementeerd."
             ;;
         3)
-            echo "Functie nog niet geïmplementeerd."
+            f_destroy
             ;;
         4)
             echo "Afsluiten..."
