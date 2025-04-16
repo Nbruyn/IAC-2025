@@ -7,7 +7,7 @@ Vagrant.configure("2") do |config|
   config.ssh.insert_key = false
 
 #Path to generated SSH-key
-config.ssh.private_key_path = ["/home/neville/IAC-2025/vagrant/klanten/klantnaam/ssh/klantnaam.pub","~/.vagrant.d/insecure_private_key"]
+config.ssh.private_key_path = ["/home/neville/IAC-2025/vagrant/klanten/klantnaam/ssh/klantnaam","~/.vagrant.d/insecure_private_key"]
 
 #Server_variables
   SERVER = ENV['SERVER'].to_i  # Aantal servers
